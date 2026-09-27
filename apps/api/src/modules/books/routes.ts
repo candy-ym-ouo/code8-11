@@ -8,6 +8,7 @@ import { currentUser, requireAuth } from '../../lib/auth.js';
 import { normalizeMoodTags, normalizeText, validateStatusTransition } from '../../lib/domain.js';
 import { writeEvent } from '../../lib/events.js';
 import { paginationFromQuery, parseId } from '../../lib/http.js';
+import { indexBookSafely } from '../../lib/search/index.js';
 
 const nullableText = (max: number) =>
   z.preprocess(
@@ -347,6 +348,10 @@ export const bookRoutes: FastifyPluginAsync = async (app) => {
       });
       return tx.book.findUniqueOrThrow({ where: { id: bookId } });
     });
+    // 书名 / 作者是痕迹检索文档的一部分，变更后需级联更新该书全部痕迹文档。
+    if (result.title !== existing.title || result.author !== existing.author) {
+      await indexBookSafely(request.log, userId, bookId);
+    }
     return { book: serializeBook(result) };
   });
 
@@ -500,6 +505,8 @@ export const bookRoutes: FastifyPluginAsync = async (app) => {
         });
       }
     });
+    // 删除书目会级联软删除全部痕迹，检索索引同步移除对应文档。
+    await indexBookSafely(request.log, userId, bookId);
     return reply.status(204).send();
   });
 };

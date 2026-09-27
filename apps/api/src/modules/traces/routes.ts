@@ -8,6 +8,7 @@ import { currentUser, requireAuth } from '../../lib/auth.js';
 import { isRestoreWindowOpen, normalizeText, validatePageRange, validateSinglePage } from '../../lib/domain.js';
 import { writeEvent } from '../../lib/events.js';
 import { optionalDate, paginationFromQuery, parseId } from '../../lib/http.js';
+import { indexTraceSafely } from '../../lib/search/index.js';
 
 const optionalReason = (max: number) =>
   z.preprocess(
@@ -224,6 +225,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         });
         return created;
       });
+      await indexTraceSafely(request.log, 'DOG_EAR', dogEar.id);
       return reply.status(201).send({ dogEar: serializeDogEar(dogEar) });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -278,6 +280,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
       });
       return tx.dogEar.findUniqueOrThrow({ where: { id } });
     });
+    await indexTraceSafely(request.log, 'DOG_EAR', id);
     return { dogEar: serializeDogEar(updated) };
   });
 
@@ -304,6 +307,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         payload: { pageNumber: existing.pageNumber }
       });
     });
+    await indexTraceSafely(request.log, 'DOG_EAR', id);
     return reply.status(204).send();
   });
 
@@ -335,6 +339,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
       });
       return value;
     });
+    await indexTraceSafely(request.log, 'DOG_EAR', id);
     return { dogEar: serializeDogEar(restored) };
   });
 
@@ -366,6 +371,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
       });
       return created;
     });
+    await indexTraceSafely(request.log, 'ANNOTATION', annotation.id);
     return reply.status(201).send({ annotation: serializeAnnotation(annotation) });
   });
 
@@ -404,6 +410,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
       });
       return tx.annotation.findUniqueOrThrow({ where: { id } });
     });
+    await indexTraceSafely(request.log, 'ANNOTATION', id);
     return { annotation: serializeAnnotation(updated) };
   });
 
@@ -430,6 +437,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         payload: { startPage: existing.startPage, endPage: existing.endPage }
       });
     });
+    await indexTraceSafely(request.log, 'ANNOTATION', id);
     return reply.status(204).send();
   });
 
@@ -457,6 +465,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
       });
       return value;
     });
+    await indexTraceSafely(request.log, 'ANNOTATION', id);
     return { annotation: serializeAnnotation(restored) };
   });
 
@@ -487,6 +496,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
       });
       return created;
     });
+    await indexTraceSafely(request.log, 'REREAD_MARK', mark.id);
     return reply.status(201).send({ rereadMark: serializeRereadMark(mark) });
   });
 
@@ -525,6 +535,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
       });
       return tx.rereadMark.findUniqueOrThrow({ where: { id } });
     });
+    await indexTraceSafely(request.log, 'REREAD_MARK', id);
     return { rereadMark: serializeRereadMark(updated) };
   });
 
@@ -551,6 +562,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         payload: { pageNumber: existing.pageNumber }
       });
     });
+    await indexTraceSafely(request.log, 'REREAD_MARK', id);
     return reply.status(204).send();
   });
 
@@ -578,6 +590,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
       });
       return value;
     });
+    await indexTraceSafely(request.log, 'REREAD_MARK', id);
     return { rereadMark: serializeRereadMark(restored) };
   });
 };
