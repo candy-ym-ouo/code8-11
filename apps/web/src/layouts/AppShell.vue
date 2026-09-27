@@ -23,6 +23,7 @@ async function logout(): Promise<void> {
       </RouterLink>
       <nav class="main-nav" aria-label="主导航">
         <RouterLink to="/">我的书</RouterLink>
+        <RouterLink to="/search">搜索</RouterLink>
         <RouterLink to="/timeline">时间线</RouterLink>
         <RouterLink to="/settings">设置</RouterLink>
       </nav>

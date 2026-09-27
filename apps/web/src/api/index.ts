@@ -8,6 +8,8 @@ import type {
   Pagination,
   Reflection,
   RereadMark,
+  SearchHit,
+  SearchIndexInfo,
   TimelineEvent,
   Trace,
   User
@@ -83,6 +85,11 @@ export const reflectionApi = {
 export const timelineApi = {
   list: (params: URLSearchParams) =>
     api.get<{ items: TimelineEvent[]; pagination: Pagination }>(`/timeline?${params}`)
+};
+
+export const searchApi = {
+  traces: (params: URLSearchParams) =>
+    api.get<{ items: SearchHit[]; pagination: Pagination; index: SearchIndexInfo }>(`/search/traces?${params}`)
 };
 
 export const exportApi = {

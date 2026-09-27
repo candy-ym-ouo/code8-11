@@ -12,6 +12,8 @@ import { traceRoutes } from './modules/traces/routes.js';
 import { reflectionRoutes } from './modules/reflections/routes.js';
 import { timelineRoutes } from './modules/timeline/routes.js';
 import { exportRoutes } from './modules/exports/routes.js';
+import { searchRoutes } from './modules/search/routes.js';
+import { ensureSearchIndex } from './search/rebuild.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -75,6 +77,18 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(reflectionRoutes, { prefix: '/api/v1' });
   await app.register(timelineRoutes, { prefix: '/api/v1' });
   await app.register(exportRoutes, { prefix: '/api/v1' });
+  await app.register(searchRoutes, { prefix: '/api/v1' });
+
+  // 启动引导：确保存在可写的 ACTIVE 代际；若索引从未完整构建，
+  // 后台触发一次全量重建（不阻塞 listen，也不阻塞任何写入）。
+  app.addHook('onReady', async () => {
+    if (env.NODE_ENV === 'test') return;
+    try {
+      await ensureSearchIndex();
+    } catch (error) {
+      app.log.error(error, 'search index bootstrap failed');
+    }
+  });
 
   app.setNotFoundHandler((request, reply) =>
     sendError(reply, 404, 'NOT_FOUND', '接口不存在', undefined, request.id)

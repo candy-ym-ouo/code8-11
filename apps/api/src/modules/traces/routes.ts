@@ -8,6 +8,13 @@ import { currentUser, requireAuth } from '../../lib/auth.js';
 import { isRestoreWindowOpen, normalizeText, validatePageRange, validateSinglePage } from '../../lib/domain.js';
 import { writeEvent } from '../../lib/events.js';
 import { optionalDate, paginationFromQuery, parseId } from '../../lib/http.js';
+import {
+  annotationSnapshot,
+  dogEarSnapshot,
+  indexTrace,
+  removeTrace,
+  rereadMarkSnapshot
+} from '../../search/indexer.js';
 
 const optionalReason = (max: number) =>
   z.preprocess(
@@ -222,6 +229,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
           action: 'CREATED',
           payload: { pageNumber: created.pageNumber, reason: eventSummary(created.reason) }
         });
+        await indexTrace(tx, dogEarSnapshot(created));
         return created;
       });
       return reply.status(201).send({ dogEar: serializeDogEar(dogEar) });
@@ -276,7 +284,9 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'UPDATED',
         payload: { pageNumber: nextPage, reason: eventSummary(nextReason) }
       });
-      return tx.dogEar.findUniqueOrThrow({ where: { id } });
+      const fresh = await tx.dogEar.findUniqueOrThrow({ where: { id } });
+      await indexTrace(tx, dogEarSnapshot(fresh));
+      return fresh;
     });
     return { dogEar: serializeDogEar(updated) };
   });
@@ -303,6 +313,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'DELETED',
         payload: { pageNumber: existing.pageNumber }
       });
+      await removeTrace(tx, 'DOG_EAR', id, existing.version + 1);
     });
     return reply.status(204).send();
   });
@@ -333,6 +344,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'RESTORED',
         payload: { pageNumber: value.pageNumber }
       });
+      await indexTrace(tx, dogEarSnapshot(value));
       return value;
     });
     return { dogEar: serializeDogEar(restored) };
@@ -364,6 +376,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'CREATED',
         payload: { startPage: created.startPage, endPage: created.endPage, summary: eventSummary(created.content) }
       });
+      await indexTrace(tx, annotationSnapshot(created));
       return created;
     });
     return reply.status(201).send({ annotation: serializeAnnotation(annotation) });
@@ -402,7 +415,9 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'UPDATED',
         payload: { startPage, endPage }
       });
-      return tx.annotation.findUniqueOrThrow({ where: { id } });
+      const fresh = await tx.annotation.findUniqueOrThrow({ where: { id } });
+      await indexTrace(tx, annotationSnapshot(fresh));
+      return fresh;
     });
     return { annotation: serializeAnnotation(updated) };
   });
@@ -429,6 +444,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'DELETED',
         payload: { startPage: existing.startPage, endPage: existing.endPage }
       });
+      await removeTrace(tx, 'ANNOTATION', id, existing.version + 1);
     });
     return reply.status(204).send();
   });
@@ -455,6 +471,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'RESTORED',
         payload: { startPage: value.startPage, endPage: value.endPage }
       });
+      await indexTrace(tx, annotationSnapshot(value));
       return value;
     });
     return { annotation: serializeAnnotation(restored) };
@@ -485,6 +502,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'CREATED',
         payload: { pageNumber: created.pageNumber, reason: eventSummary(created.reason) }
       });
+      await indexTrace(tx, rereadMarkSnapshot(created));
       return created;
     });
     return reply.status(201).send({ rereadMark: serializeRereadMark(mark) });
@@ -523,7 +541,9 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'UPDATED',
         payload: { pageNumber, reason: eventSummary(reason) }
       });
-      return tx.rereadMark.findUniqueOrThrow({ where: { id } });
+      const fresh = await tx.rereadMark.findUniqueOrThrow({ where: { id } });
+      await indexTrace(tx, rereadMarkSnapshot(fresh));
+      return fresh;
     });
     return { rereadMark: serializeRereadMark(updated) };
   });
@@ -550,6 +570,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'DELETED',
         payload: { pageNumber: existing.pageNumber }
       });
+      await removeTrace(tx, 'REREAD_MARK', id, existing.version + 1);
     });
     return reply.status(204).send();
   });
@@ -576,6 +597,7 @@ export const traceRoutes: FastifyPluginAsync = async (app) => {
         action: 'RESTORED',
         payload: { pageNumber: value.pageNumber }
       });
+      await indexTrace(tx, rereadMarkSnapshot(value));
       return value;
     });
     return { rereadMark: serializeRereadMark(restored) };

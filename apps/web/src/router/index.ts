@@ -6,6 +6,7 @@ import RegisterPage from '../pages/RegisterPage.vue';
 import BooksPage from '../pages/BooksPage.vue';
 import BookFormPage from '../pages/BookFormPage.vue';
 import BookDetailPage from '../pages/BookDetailPage.vue';
+import SearchPage from '../pages/SearchPage.vue';
 import TimelinePage from '../pages/TimelinePage.vue';
 import SettingsPage from '../pages/SettingsPage.vue';
 import NotFoundPage from '../pages/NotFoundPage.vue';
@@ -23,6 +24,7 @@ export const router = createRouter({
         { path: 'books/new', name: 'book-new', component: BookFormPage },
         { path: 'books/:bookId', name: 'book-detail', component: BookDetailPage },
         { path: 'books/:bookId/edit', name: 'book-edit', component: BookFormPage },
+        { path: 'search', name: 'search', component: SearchPage },
         { path: 'timeline', name: 'timeline', component: TimelinePage },
         { path: 'settings', name: 'settings', component: SettingsPage }
       ]

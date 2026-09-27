@@ -49,6 +49,19 @@ enum ActivityAction {
   COMPLETED
 }
 
+enum SearchGenerationStatus {
+  BUILDING
+  ACTIVE
+  RETIRED
+  FAILED
+}
+
+enum SearchEntityType {
+  DOG_EAR
+  ANNOTATION
+  REREAD_MARK
+}
+
 model User {
   id           String      @id @default(uuid()) @db.Uuid
   email        String      @unique @db.VarChar(320)
@@ -208,4 +221,58 @@ model ActivityEvent {
   @@index([userId, bookId, occurredAt])
   @@index([userId, entityType, occurredAt])
   @@map("activity_events")
+}
+
+// 全文检索：倒排索引代际。任意时刻至多一个 ACTIVE 与一个 BUILDING，
+// 由迁移中的部分唯一索引强制约束。
+model SearchGeneration {
+  id          Int                   @id @default(autoincrement())
+  status      SearchGenerationStatus
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  activatedAt DateTime?             @map("activated_at") @db.Timestamptz(3)
+  retiredAt   DateTime?             @map("retired_at") @db.Timestamptz(3)
+
+  documents SearchDocument[]
+
+  @@map("search_generations")
+}
+
+// 每个被索引痕迹在每个代际中至多一行；删除以墓碑（deleted_at）表示，
+// 用于抵挡重建扫描与增量双写之间的乱序竞态。
+model SearchDocument {
+  id             String           @id @default(uuid()) @db.Uuid
+  generationId   Int              @map("generation_id")
+  userId         String           @map("user_id") @db.Uuid
+  bookId         String           @map("book_id") @db.Uuid
+  entityType     SearchEntityType @map("entity_type")
+  entityId       String           @map("entity_id") @db.Uuid
+  sourceVersion  Int              @map("source_version")
+  pageStart      Int              @map("page_start")
+  pageEnd        Int              @map("page_end")
+  content        String
+  termCount      Int              @map("term_count")
+  sourceCreatedAt DateTime        @map("source_created_at") @db.Timestamptz(3)
+  deletedAt      DateTime?        @map("deleted_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  generation SearchGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  postings   SearchPosting[]
+
+  @@unique([generationId, entityType, entityId])
+  @@index([generationId, userId, deletedAt])
+  @@index([userId])
+  @@map("search_documents")
+}
+
+model SearchPosting {
+  documentId   String @map("document_id") @db.Uuid
+  generationId Int    @map("generation_id")
+  term         String @db.VarChar(64)
+  tf           Int
+
+  document SearchDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, term])
+  @@index([generationId, term])
+  @@map("search_postings")
 }

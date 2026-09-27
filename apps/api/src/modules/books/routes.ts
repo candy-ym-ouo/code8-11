@@ -8,6 +8,7 @@ import { currentUser, requireAuth } from '../../lib/auth.js';
 import { normalizeMoodTags, normalizeText, validateStatusTransition } from '../../lib/domain.js';
 import { writeEvent } from '../../lib/events.js';
 import { paginationFromQuery, parseId } from '../../lib/http.js';
+import { removeTraces } from '../../search/indexer.js';
 
 const nullableText = (max: number) =>
   z.preprocess(
@@ -460,9 +461,9 @@ export const bookRoutes: FastifyPluginAsync = async (app) => {
       }
       const now = new Date();
       const [dogEars, annotations, rereadMarks, reflections] = await Promise.all([
-        tx.dogEar.findMany({ where: { bookId, deletedAt: null }, select: { id: true } }),
-        tx.annotation.findMany({ where: { bookId, deletedAt: null }, select: { id: true } }),
-        tx.rereadMark.findMany({ where: { bookId, deletedAt: null }, select: { id: true } }),
+        tx.dogEar.findMany({ where: { bookId, deletedAt: null }, select: { id: true, version: true } }),
+        tx.annotation.findMany({ where: { bookId, deletedAt: null }, select: { id: true, version: true } }),
+        tx.rereadMark.findMany({ where: { bookId, deletedAt: null }, select: { id: true, version: true } }),
         tx.completionReflection.findMany({ where: { bookId, deletedAt: null }, select: { id: true } })
       ]);
       await Promise.all([
@@ -470,6 +471,12 @@ export const bookRoutes: FastifyPluginAsync = async (app) => {
         tx.annotation.updateMany({ where: { bookId, deletedAt: null }, data: { deletedAt: now, version: { increment: 1 } } }),
         tx.rereadMark.updateMany({ where: { bookId, deletedAt: null }, data: { deletedAt: now, version: { increment: 1 } } }),
         tx.completionReflection.updateMany({ where: { bookId, deletedAt: null }, data: { deletedAt: now, version: { increment: 1 } } })
+      ]);
+      // 级联软删后，检索索引也必须同事务落下墓碑，否则旧代际仍可检出已删痕迹。
+      await removeTraces(tx, [
+        ...dogEars.map((item) => ({ entityType: 'DOG_EAR' as const, entityId: item.id, sourceVersion: item.version + 1 })),
+        ...annotations.map((item) => ({ entityType: 'ANNOTATION' as const, entityId: item.id, sourceVersion: item.version + 1 })),
+        ...rereadMarks.map((item) => ({ entityType: 'REREAD_MARK' as const, entityId: item.id, sourceVersion: item.version + 1 }))
       ]);
       await tx.book.update({
         where: { id: bookId },

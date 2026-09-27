@@ -10,6 +10,7 @@ import {
   requireAuth,
   verifyPassword
 } from '../../lib/auth.js';
+import { removeUserDocuments } from '../../search/indexer.js';
 
 const credentialsSchema = z.object({
   email: z.string().trim().email('请输入有效邮箱').max(320),
@@ -129,16 +130,18 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       throw new AppError(422, 'INVALID_PASSWORD', '密码不正确');
     }
     const now = new Date();
-    await prisma.$transaction([
-      prisma.session.updateMany({
+    await prisma.$transaction(async (tx) => {
+      await tx.session.updateMany({
         where: { userId: authUser.id, revokedAt: null },
         data: { revokedAt: now }
-      }),
-      prisma.user.update({
+      });
+      await tx.user.update({
         where: { id: authUser.id },
         data: { status: 'DELETED', deletedAt: now }
-      })
-    ]);
+      });
+      // 检索索引属于个人数据，账号删除时同事务物理清除。
+      await removeUserDocuments(tx, authUser.id);
+    });
     reply.clearCookie('pbt_session', { path: '/' });
     return reply.status(204).send();
   });

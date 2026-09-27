@@ -931,3 +931,51 @@ small,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* 搜索页 */
+.index-note {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.result-count {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 0.8rem;
+}
+
+.search-hit {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 0.8rem;
+}
+
+.search-hit-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.search-hit-time {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.search-snippet {
+  margin: 0;
+  line-height: 1.7;
+  color: #4c4238;
+}
+
+.search-snippet mark {
+  border-radius: 3px;
+  background: #f3d9a4;
+  color: inherit;
+  padding: 0 1px;
+}

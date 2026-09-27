@@ -99,6 +99,28 @@ export interface Pagination {
   total: number;
 }
 
+export interface SearchSnippet {
+  text: string;
+  highlights: Array<{ start: number; end: number }>;
+}
+
+export interface SearchHit {
+  entityType: TraceType;
+  entityId: string;
+  bookId: string;
+  bookTitle: string;
+  pageStart: number;
+  pageEnd: number;
+  score: number;
+  snippet: SearchSnippet;
+  createdAt: string;
+}
+
+export interface SearchIndexInfo {
+  ready: boolean;
+  building: boolean;
+}
+
 export const MOOD_LABELS: Record<MoodTag, string> = {
   MOVED: '被触动',
   CALM: '平静',
